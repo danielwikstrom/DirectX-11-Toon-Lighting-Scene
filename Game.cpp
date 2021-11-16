@@ -64,7 +64,9 @@ void Game::Initialize(HWND window, int width, int height)
 
 	//setup camera
 	m_Camera01.setPosition(Vector3(0.0f, 0.0f, 4.0f));
-	m_Camera01.setRotation(Vector3(-90.0f, -180.0f, 0.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
+	m_Camera01.setRotation(Vector3(0.0f, -180.0f, 90.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
+	m_Camera02.setPosition(Vector3(0.0f, 7.0f, 0.0f));
+	m_Camera02.setRotation(Vector3(0.0f, -180.0f, 180.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
 
 	
 #ifdef DXTK_AUDIO
@@ -125,34 +127,66 @@ void Game::Tick()
 void Game::Update(DX::StepTimer const& timer)
 {
 	//note that currently.  Delta-time is not considered in the game object movement. 
-	if (m_gameInputCommands.left)
-	{
-		Vector3 rotation = m_Camera01.getRotation();
-		rotation.y = rotation.y += m_Camera01.getRotationSpeed();
-		m_Camera01.setRotation(rotation);
-	}
-	if (m_gameInputCommands.right)
-	{
-		Vector3 rotation = m_Camera01.getRotation();
-		rotation.y = rotation.y -= m_Camera01.getRotationSpeed();
-		m_Camera01.setRotation(rotation);
-	}
-	if (m_gameInputCommands.forward)
-	{
-		Vector3 position = m_Camera01.getPosition(); //get the position
-		position += (m_Camera01.getForward()*m_Camera01.getMoveSpeed()); //add the forward vector
-		m_Camera01.setPosition(position);
-	}
-	if (m_gameInputCommands.back)
-	{
-		Vector3 position = m_Camera01.getPosition(); //get the position
-		position -= (m_Camera01.getForward()*m_Camera01.getMoveSpeed()); //add the forward vector
-		m_Camera01.setPosition(position);
-	}
+    float deltaTime = float(timer.GetElapsedSeconds());
+    float rotationSpeed = m_Camera01.getRotationSpeed() * deltaTime;
+    float movementSpeed = m_Camera01.getMoveSpeed() * deltaTime;
+    //note that currently.  Delta-time is not considered in the game object movement. 
+    if (m_gameInputCommands.rotLeft)
+    {
+        Vector3 rotation = m_Camera01.getRotation();
+        rotation.y = rotation.y += rotationSpeed;
+        m_Camera01.setRotation(rotation);
+    }
+    if (m_gameInputCommands.rotRight)
+    {
+        Vector3 rotation = m_Camera01.getRotation();
+        rotation.y = rotation.y -= rotationSpeed;
+        m_Camera01.setRotation(rotation);
+    }
+    if (m_gameInputCommands.rotUp)
+    {
+        Vector3 rotation = m_Camera01.getRotation();
+        rotation.z = rotation.z -= rotationSpeed;
+        m_Camera01.setRotation(rotation);
+    }
+    if (m_gameInputCommands.rotDown)
+    {
+        Vector3 rotation = m_Camera01.getRotation();
+        rotation.z = rotation.z += rotationSpeed;
+        m_Camera01.setRotation(rotation);
+    }
+    if (m_gameInputCommands.forward)
+    {
+        Vector3 position = m_Camera01.getPosition(); //get the position
+        position += (m_Camera01.getForward() * movementSpeed); //add the forward vector
+        m_Camera01.setPosition(position);
+    }
+    if (m_gameInputCommands.back)
+    {
+        Vector3 position = m_Camera01.getPosition(); //get the position
+        position -= (m_Camera01.getForward() * movementSpeed); //add the forward vector
+        m_Camera01.setPosition(position);
+    }
+    if (m_gameInputCommands.right)
+    {
+        Vector3 position = m_Camera01.getPosition(); //get the position
+        position += (m_Camera01.getRight() * movementSpeed); //add the forward vector
+        m_Camera01.setPosition(position);
+    }
+    if (m_gameInputCommands.left)
+    {
+        Vector3 position = m_Camera01.getPosition(); //get the position
+        position -= (m_Camera01.getRight() * movementSpeed); //add the forward vector
+        m_Camera01.setPosition(position);
+    }
 
 	m_Camera01.Update();	//camera update.
 
 	m_view = m_Camera01.getCameraMatrix();
+
+	m_Camera02.Update();	//camera update.
+
+	m_view2 = m_Camera02.getCameraMatrix();
 	m_world = Matrix::Identity;
 
 #ifdef DXTK_AUDIO
@@ -268,7 +302,7 @@ void Game::RenderTexturePass1()
 
 	// Turn our shaders on,  set parameters
 	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_texture1.Get());
+	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light, m_texture1.Get());
 
 	//render our model
 	m_BasicModel.Render(context);
@@ -279,7 +313,7 @@ void Game::RenderTexturePass1()
 
 	//setup and draw sphere
 	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_texture2.Get());
+	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light, m_texture2.Get());
 	m_BasicModel2.Render(context);
 
 	//prepare transform for floor object. 
@@ -289,7 +323,7 @@ void Game::RenderTexturePass1()
 
 	//setup and draw cube
 	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_texture1.Get());
+	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light, m_texture1.Get());
 	m_BasicModel3.Render(context);
 
 	// Reset the render target back to the original back buffer and not the render to texture anymore.	

@@ -89,6 +89,7 @@ private:
 
 	//Cameras
 	Camera																	m_Camera01;
+    Camera																	m_Camera02;
 
 	//textures 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_texture1;
@@ -126,4 +127,8 @@ private:
     DirectX::SimpleMath::Matrix                                             m_world;
     DirectX::SimpleMath::Matrix                                             m_view;
     DirectX::SimpleMath::Matrix                                             m_projection;
+
+    DirectX::SimpleMath::Matrix                                             m_world2;
+    DirectX::SimpleMath::Matrix                                             m_view2;
+    DirectX::SimpleMath::Matrix                                             m_projection2;
 };
