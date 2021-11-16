@@ -65,8 +65,8 @@ void Game::Initialize(HWND window, int width, int height)
 	//setup camera
 	m_Camera01.setPosition(Vector3(0.0f, 0.0f, 4.0f));
 	m_Camera01.setRotation(Vector3(0.0f, -180.0f, 90.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
-	m_Camera02.setPosition(Vector3(0.0f, 7.0f, 0.0f));
-	m_Camera02.setRotation(Vector3(0.0f, -180.0f, 180.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
+	//m_Camera02.setPosition(Vector3(0.0f, 7.0f, 0.0f));
+	//m_Camera02.setRotation(Vector3(0.0f, -180.0f, 180.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
 
 	
 #ifdef DXTK_AUDIO
@@ -184,9 +184,9 @@ void Game::Update(DX::StepTimer const& timer)
 
 	m_view = m_Camera01.getCameraMatrix();
 
-	m_Camera02.Update();	//camera update.
+	//m_Camera02.Update();	//camera update.
 
-	m_view2 = m_Camera02.getCameraMatrix();
+	//m_view2 = m_Camera02.getCameraMatrix();
 	m_world = Matrix::Identity;
 
 #ifdef DXTK_AUDIO
@@ -251,35 +251,33 @@ void Game::Render()
 //	context->RSSetState(m_states->Wireframe());
 
 	//create our render to texture.
-	RenderTexturePass1();
+	//RenderTexturePass1();
 
 	/////////////////////////////////////////////////////////////draw our scene normally. 
 	m_world = SimpleMath::Matrix::Identity;
-	// Turn our shaders on,  set parameters
-	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_texture1.Get());
 
-	//render our model
-	m_BasicModel.Render(context);
 
-	//prepare transform for second object. 
-	SimpleMath::Matrix newPosition1 = SimpleMath::Matrix::CreateTranslation(2.0f, 0.0f, 0.0f);
-	m_world = m_world * newPosition1;
-
-	//setup and draw sphere
-	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_texture2.Get());
-	m_BasicModel2.Render(context);
 
 	//prepare transform for floor object. 
 	m_world = SimpleMath::Matrix::Identity; //set world back to identity
-	SimpleMath::Matrix newPosition3 = SimpleMath::Matrix::CreateTranslation(0.0f, -0.6f, 0.0f);
-	m_world = m_world * newPosition3;
+	SimpleMath::Matrix newPosition = SimpleMath::Matrix::CreateTranslation(0.0f, -1.0f, 0.0f);
+	m_world = m_world * newPosition;
 
 	//setup and draw cube
 	m_BasicShaderPair.EnableShader(context);
 	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_texture1.Get());
-	m_BasicModel3.Render(context);
+	m_floor.Render(context);
+
+    //prepare transform for character
+    SimpleMath::Matrix newPosition2 = SimpleMath::Matrix::CreateTranslation(0.0f, 0.0f, 0.0f);
+    m_world = m_world * newPosition2;
+
+    //setup and draw character
+    m_BasicShaderPair.EnableShader(context);
+    m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_texture2.Get());
+    //m_character.Render(context);
+
+
 
 	///////////////////////////////////////draw our sprite with the render texture displayed on it. 
 	m_sprites->Begin();
@@ -300,21 +298,6 @@ void Game::RenderTexturePass1()
 	// Clear the render to texture.
 	m_FirstRenderPass->clearRenderTarget(context, 0.0f, 0.0f, 1.0f, 1.0f);
 
-	// Turn our shaders on,  set parameters
-	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light, m_texture1.Get());
-
-	//render our model
-	m_BasicModel.Render(context);
-
-	//prepare transform for second object. 
-	SimpleMath::Matrix newPosition = SimpleMath::Matrix::CreateTranslation(2.0f, 0.0f, 0.0f);
-	m_world = m_world * newPosition;
-
-	//setup and draw sphere
-	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light, m_texture2.Get());
-	m_BasicModel2.Render(context);
 
 	//prepare transform for floor object. 
 	m_world = SimpleMath::Matrix::Identity; //set world back to identity
@@ -324,7 +307,7 @@ void Game::RenderTexturePass1()
 	//setup and draw cube
 	m_BasicShaderPair.EnableShader(context);
 	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light, m_texture1.Get());
-	m_BasicModel3.Render(context);
+	m_floor.Render(context);
 
 	// Reset the render target back to the original back buffer and not the render to texture anymore.	
 	context->OMSetRenderTargets(1, &renderTargetView, depthTargetView);
@@ -426,18 +409,16 @@ void Game::CreateDeviceDependentResources()
     m_font = std::make_unique<SpriteFont>(device, L"SegoeUI_18.spritefont");
 	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(context);
 
-	//setup our test model
-	m_BasicModel.InitializeSphere(device);
 
-	m_BasicModel2.InitializeModel(device,"drone.obj");
-	m_BasicModel3.InitializeBox(device, 10.0f, 0.1f, 10.0f);	//box includes dimensions
+	m_floor.InitializeBox(device, 10.0f, 1.0f, 10.0f);	//box includes dimensions
+    //m_character.InitializeModel(device, "rockFlatGrass.obj");
 
 	//load and set up our Vertex and Pixel Shaders
 	m_BasicShaderPair.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
 
 	//load Textures
-	CreateDDSTextureFromFile(device, L"seafloor.dds",		nullptr,	m_texture1.ReleaseAndGetAddressOf());
-	CreateDDSTextureFromFile(device, L"EvilDrone_Diff.dds", nullptr,	m_texture2.ReleaseAndGetAddressOf());
+	CreateDDSTextureFromFile(device, L"FloorTexture.dds",		nullptr,	m_texture1.ReleaseAndGetAddressOf());
+	CreateDDSTextureFromFile(device, L"FloorTexture_BW.dds", nullptr,	m_texture2.ReleaseAndGetAddressOf());
 
 	//Initialise Render to texture
 	m_FirstRenderPass = new RenderTexture(device, 800, 600, 1, 2);	//for our rendering, We dont use the last two properties. but.  they cant be zero and they cant be the same. 

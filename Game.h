@@ -97,9 +97,8 @@ private:
 
 	//Shaders
 	Shader																	m_BasicShaderPair;
-	ModelClass																m_BasicModel;
-	ModelClass																m_BasicModel2;
-	ModelClass																m_BasicModel3;
+	ModelClass																m_floor;
+    ModelClass																m_character;
 
 	//RenderTextures
 	RenderTexture*															m_FirstRenderPass;
