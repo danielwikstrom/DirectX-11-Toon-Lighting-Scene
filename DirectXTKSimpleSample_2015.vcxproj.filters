@@ -38,6 +38,9 @@
     <ClInclude Include="RenderTexture.h">
       <Filter>Rendering</Filter>
     </ClInclude>
+    <ClInclude Include="FireShader.h">
+      <Filter>Rendering</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -60,6 +63,9 @@
     </ClCompile>
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="RenderTexture.cpp">
+      <Filter>Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="FireShader.cpp">
       <Filter>Rendering</Filter>
     </ClCompile>
   </ItemGroup>
@@ -93,6 +99,18 @@
       <Filter>Assets</Filter>
     </FxCompile>
     <FxCompile Include="light_vs.hlsl">
+      <Filter>Assets</Filter>
+    </FxCompile>
+    <FxCompile Include="water_ps.hlsl">
+      <Filter>Assets</Filter>
+    </FxCompile>
+    <FxCompile Include="water_vs.hlsl">
+      <Filter>Assets</Filter>
+    </FxCompile>
+    <FxCompile Include="fire_vs.hlsl">
+      <Filter>Assets</Filter>
+    </FxCompile>
+    <FxCompile Include="fire_ps.hlsl">
       <Filter>Assets</Filter>
     </FxCompile>
   </ItemGroup>

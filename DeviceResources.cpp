@@ -184,6 +184,8 @@ void DeviceResources::CreateDeviceResources()
         (void) m_d3dContext.As(&m_d3dContext1);
         (void) m_d3dContext.As(&m_d3dAnnotation);
     }
+
+
 }
 
 // These resources need to be recreated every time the window size is changed.
@@ -254,6 +256,9 @@ void DeviceResources::CreateWindowSizeDependentResources()
         ComPtr<IDXGIFactory2> dxgiFactory2;
         if (SUCCEEDED(dxgiFactory.As(&dxgiFactory2)))
         {
+
+
+
             // DirectX 11.1 or later
             DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
             swapChainDesc.Width = backBufferWidth;

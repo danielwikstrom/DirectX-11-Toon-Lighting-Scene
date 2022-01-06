@@ -74,6 +74,8 @@ bool ModelClass::InitializeBox(ID3D11Device * device, float xwidth, float yheigh
 }
 
 
+
+
 void ModelClass::Shutdown()
 {
 

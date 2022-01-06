@@ -52,6 +52,9 @@ namespace DX
         DXGI_FORMAT             GetDepthBufferFormat() const            { return m_depthBufferFormat; }
         D3D11_VIEWPORT          GetScreenViewport() const               { return m_screenViewport; }
         UINT                    GetBackBufferCount() const              { return m_backBufferCount; }
+        ID3D11BlendState*       m_alphaEnableBlendingState;
+        ID3D11BlendState*       m_alphaDisableBlendingState;
+        D3D11_BLEND_DESC        blendStateDescription;
 
         // Performance events
         void PIXBeginEvent(_In_z_ const wchar_t* name)

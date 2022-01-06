@@ -11,6 +11,7 @@
 #include "Input.h"
 #include "Camera.h"
 #include "RenderTexture.h"
+#include "FireShader.h"
 
 
 // A basic game implementation that creates a D3D11 device and
@@ -92,19 +93,38 @@ private:
     Camera																	m_Camera02;
 
 	//textures 
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_texture1;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_texture2;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_waterTexture;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_terrainTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_noiseTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_sandTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_sandNormal;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_rockTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_rockNormal;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_fireTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_fireAlpha;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_logTexture;
 
 	//Shaders
-	Shader																	m_BasicShaderPair;
-	ModelClass																m_BasicModel;
-	ModelClass																m_BasicModel2;
-	ModelClass																m_BasicModel3;
+	Shader																	m_waterShader;
+    Shader																	m_terrainShader;
+    Shader																	m_seafloorShader;
+    Shader																	m_logShader;
+    FireShader															    m_fireShader;
+
+    // 3D Models
+    ModelClass                                                              m_WaterModel;
+    ModelClass                                                              m_TerrainModel;
+    ModelClass                                                              m_CharacterModel;
+    ModelClass                                                              m_floor;
+    ModelClass                                                              m_FireQuad;
+    ModelClass                                                              m_logModel;
 
 	//RenderTextures
 	RenderTexture*															m_FirstRenderPass;
 	RECT																	m_fullscreenRect;
 	RECT																	m_CameraViewRect;
+
+
 	
 
 

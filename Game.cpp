@@ -59,7 +59,7 @@ void Game::Initialize(HWND window, int width, int height)
 	//setup light
 	m_Light.setAmbientColour(0.3f, 0.3f, 0.3f, 1.0f);
 	m_Light.setDiffuseColour(1.0f, 1.0f, 1.0f, 1.0f);
-	m_Light.setPosition(2.0f, 1.0f, 1.0f);
+	m_Light.setPosition(0.0f, 10.0f, 0.0f);
 	m_Light.setDirection(-1.0f, -1.0f, 0.0f);
 
 	//setup camera
@@ -67,6 +67,8 @@ void Game::Initialize(HWND window, int width, int height)
 	m_Camera01.setRotation(Vector3(0.0f, -180.0f, 90.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
 	m_Camera02.setPosition(Vector3(0.0f, 7.0f, 0.0f));
 	m_Camera02.setRotation(Vector3(0.0f, -180.0f, 180.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
+
+
 
 	
 #ifdef DXTK_AUDIO
@@ -141,18 +143,23 @@ void Game::Update(DX::StepTimer const& timer)
     {
         Vector3 rotation = m_Camera01.getRotation();
         rotation.y = rotation.y -= rotationSpeed;
+        
         m_Camera01.setRotation(rotation);
     }
     if (m_gameInputCommands.rotUp)
     {
         Vector3 rotation = m_Camera01.getRotation();
         rotation.z = rotation.z -= rotationSpeed;
+        if (rotation.z <= 0.5f)
+            rotation.z = 0.5f;
         m_Camera01.setRotation(rotation);
     }
     if (m_gameInputCommands.rotDown)
     {
         Vector3 rotation = m_Camera01.getRotation();
         rotation.z = rotation.z += rotationSpeed;
+        if (rotation.z >= 179.5f)
+            rotation.z = 179.5f;
         m_Camera01.setRotation(rotation);
     }
     if (m_gameInputCommands.forward)
@@ -238,97 +245,134 @@ void Game::Render()
     auto context = m_deviceResources->GetD3DDeviceContext();
 	auto renderTargetView = m_deviceResources->GetRenderTargetView();
 	auto depthTargetView = m_deviceResources->GetDepthStencilView();
-
+    std::wstring rotation = std::to_wstring(m_Camera01.getRotation().z);
+    const wchar_t* rochar = rotation.c_str();
+    
     // Draw Text to the screen
     m_sprites->Begin();
 		m_font->DrawString(m_sprites.get(), L"DirectXTK Demo Window", XMFLOAT2(10, 10), Colors::Yellow);
+
+        m_font->DrawString(m_sprites.get(),  rochar, XMFLOAT2(10, 20), Colors::Yellow);
     m_sprites->End();
 
 	//Set Rendering states. 
-	context->OMSetBlendState(m_states->Opaque(), nullptr, 0xFFFFFFFF);
 	context->OMSetDepthStencilState(m_states->DepthDefault(), 0);
 	context->RSSetState(m_states->CullClockwise());
-//	context->RSSetState(m_states->Wireframe());
 
-	//create our render to texture.
-	RenderTexturePass1();
 
 	/////////////////////////////////////////////////////////////draw our scene normally. 
+
+    // Prepare transforms for island model
+    m_world = SimpleMath::Matrix::Identity;
+    SimpleMath::Matrix islandOffset = SimpleMath::Matrix::CreateTranslation(0.0f, -5.0f, 0.0f);
+    SimpleMath::Matrix islandScale = SimpleMath::Matrix::CreateScale(10.0f, 64.0f, 10.0f);
+    SimpleMath::Matrix islandPosition = islandScale * islandOffset;
+    m_world = m_world * islandPosition;
+
+    //render the island model
+    m_terrainShader.EnableShader(context);
+    m_terrainShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, 0.0f, Vector2(0.05f, 0.05f), m_rockTexture.Get(), m_rockNormal.Get());
+    m_TerrainModel.Render(context);
+
+    // Prepare transforms for logs model
+    m_world = SimpleMath::Matrix::Identity;
+    SimpleMath::Matrix logOffset = SimpleMath::Matrix::CreateTranslation(0.0f, 1.3f, 0.0f);
+    SimpleMath::Matrix logScale = SimpleMath::Matrix::CreateScale(0.3f, 0.3f, 0.3f);
+    SimpleMath::Matrix logPosition = logScale * logOffset;
+    m_world = m_world * logPosition;
+
+    //render the logs model
+    m_logShader.EnableShader(context);
+    m_logShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, 0.0f, Vector2(0.05f, 0.05f), m_logTexture.Get());
+    m_logModel.Render(context);
+
+
+
+    // Prepare transforms for sea floor
+    m_world = SimpleMath::Matrix::Identity;
+    SimpleMath::Matrix seafloorOffset = SimpleMath::Matrix::CreateTranslation(0.0f, -30.0f, 0.0f);
+    SimpleMath::Matrix seaFloorScale = SimpleMath::Matrix::CreateScale(1000.0f, 1.0f, 1000.0f);
+    SimpleMath::Matrix seaFloorPos =seaFloorScale * seafloorOffset;
+    m_world = m_world * seaFloorPos;
+
+    //render the sea floor
+    m_seafloorShader.EnableShader(context);
+    m_seafloorShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, 0.0f, Vector2(100, 100), m_sandTexture.Get(), m_sandNormal.Get());
+    m_floor.Render(context);
+
+    //Prepare transforms for water
 	m_world = SimpleMath::Matrix::Identity;
-	// Turn our shaders on,  set parameters
-	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_texture1.Get());
+	SimpleMath::Matrix waterPosition = SimpleMath::Matrix::CreateTranslation(0.0f, 0.0f, 0.0f);
+    SimpleMath::Matrix waterScale = SimpleMath::Matrix::CreateScale(0.2f, 1.0f, 0.2f);
+	m_world = m_world * waterScale * waterPosition;
 
-	//render our model
-	m_BasicModel.Render(context);
 
-	//prepare transform for second object. 
-	SimpleMath::Matrix newPosition1 = SimpleMath::Matrix::CreateTranslation(2.0f, 0.0f, 0.0f);
-	m_world = m_world * newPosition1;
 
-	//setup and draw sphere
-	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_texture2.Get());
-	m_BasicModel2.Render(context);
+	//render the water model
+    context->OMSetBlendState(m_states->AlphaBlend(), nullptr, 0xFFFFFFFF);
+	m_waterShader.EnableShader(context);
+	m_waterShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_timer.GetTotalSeconds(), Vector2(30,30), m_waterTexture.Get(), m_noiseTexture.Get());
+	m_WaterModel.Render(context);
 
-	//prepare transform for floor object. 
-	m_world = SimpleMath::Matrix::Identity; //set world back to identity
-	SimpleMath::Matrix newPosition3 = SimpleMath::Matrix::CreateTranslation(0.0f, -0.6f, 0.0f);
-	m_world = m_world * newPosition3;
 
-	//setup and draw cube
-	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_texture1.Get());
-	m_BasicModel3.Render(context);
+    //Render Quad for fire
+    m_world = SimpleMath::Matrix::Identity;
+    SimpleMath::Matrix firePosition = SimpleMath::Matrix::CreateTranslation(00.0f, 4.2f, 0.0f);
+    SimpleMath::Matrix fireRotationX = SimpleMath::Matrix::CreateRotationX(-3.1415f/2);
+    SimpleMath::Matrix fireRotationY = SimpleMath::Matrix::CreateRotationY(3.1415f);
+    SimpleMath::Matrix fireScale = SimpleMath::Matrix::CreateScale(0.01f, 0.0075f, 0.01f);
+    m_world = m_world * fireRotationX * fireRotationY * fireScale * firePosition;
 
+    m_fireShader.EnableShader(context);
+    m_fireShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_timer.GetTotalSeconds(), Vector2(1, 1), m_fireTexture.Get(), m_noiseTexture.Get(), m_fireAlpha.Get());
+    m_FireQuad.Render(context);
+
+
+
+
+
+
+
+    context->OMSetBlendState(m_states->Opaque(), nullptr, 0xFFFFFFFF);
 	///////////////////////////////////////draw our sprite with the render texture displayed on it. 
-	m_sprites->Begin();
-	m_sprites->Draw(m_FirstRenderPass->getShaderResourceView(), m_CameraViewRect);
-	m_sprites->End();
+
 
     // Show the new frame.
     m_deviceResources->Present();
 }
 
-void Game::RenderTexturePass1()
-{
-	auto context = m_deviceResources->GetD3DDeviceContext();
-	auto renderTargetView = m_deviceResources->GetRenderTargetView();
-	auto depthTargetView = m_deviceResources->GetDepthStencilView();
-	// Set the render target to be the render to texture.
-	m_FirstRenderPass->setRenderTarget(context);
-	// Clear the render to texture.
-	m_FirstRenderPass->clearRenderTarget(context, 0.0f, 0.0f, 1.0f, 1.0f);
-
-	// Turn our shaders on,  set parameters
-	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light, m_texture1.Get());
-
-	//render our model
-	m_BasicModel.Render(context);
-
-	//prepare transform for second object. 
-	SimpleMath::Matrix newPosition = SimpleMath::Matrix::CreateTranslation(2.0f, 0.0f, 0.0f);
-	m_world = m_world * newPosition;
-
-	//setup and draw sphere
-	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light, m_texture2.Get());
-	m_BasicModel2.Render(context);
-
-	//prepare transform for floor object. 
-	m_world = SimpleMath::Matrix::Identity; //set world back to identity
-	SimpleMath::Matrix newPosition2 = SimpleMath::Matrix::CreateTranslation(0.0f, -0.6f, 0.0f);
-	m_world = m_world * newPosition2;
-
-	//setup and draw cube
-	m_BasicShaderPair.EnableShader(context);
-	m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light, m_texture1.Get());
-	m_BasicModel3.Render(context);
-
-	// Reset the render target back to the original back buffer and not the render to texture anymore.	
-	context->OMSetRenderTargets(1, &renderTargetView, depthTargetView);
-}
+//void Game::RenderTexturePass1()
+//{
+//	auto context = m_deviceResources->GetD3DDeviceContext();
+//	auto renderTargetView = m_deviceResources->GetRenderTargetView();
+//	auto depthTargetView = m_deviceResources->GetDepthStencilView();
+//	// Set the render target to be the render to texture.
+//	m_FirstRenderPass->setRenderTarget(context);
+//	// Clear the render to texture.
+//	m_FirstRenderPass->clearRenderTarget(context, 0.0f, 0.0f, 1.0f, 1.0f);
+//
+//	// Turn our shaders on,  set parameters
+//    m_waterShader.EnableShader(context);
+//	//m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light, m_texture1.Get());
+//    //m_waterShader.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light);
+//
+//	//render our model
+//    m_WaterModel.Render(context);
+//
+//	//prepare transform for second object. 
+//	SimpleMath::Matrix newPosition = SimpleMath::Matrix::CreateTranslation(2.0f, 0.0f, 0.0f);
+//	m_world = m_world * newPosition;
+//
+//
+//	//prepare transform for floor object. 
+//	//m_world = SimpleMath::Matrix::Identity; //set world back to identity
+//	//SimpleMath::Matrix newPosition2 = SimpleMath::Matrix::CreateTranslation(0.0f, -0.6f, 0.0f);
+//	//m_world = m_world * newPosition2;
+//
+//
+//	// Reset the render target back to the original back buffer and not the render to texture anymore.	
+//	context->OMSetRenderTargets(1, &renderTargetView, depthTargetView);
+//}
 
 // Helper method to clear the back buffers.
 void Game::Clear()
@@ -426,18 +470,35 @@ void Game::CreateDeviceDependentResources()
     m_font = std::make_unique<SpriteFont>(device, L"SegoeUI_18.spritefont");
 	m_batch = std::make_unique<PrimitiveBatch<VertexPositionColor>>(context);
 
-	//setup our test model
-	m_BasicModel.InitializeSphere(device);
+	//setup our models
+	m_WaterModel.InitializeModel(device, "models/plane.obj");
+    m_TerrainModel.InitializeModel(device, "models/water.obj");
+    m_floor.InitializeBox(device, 1.0f, 1.0f, 1.0f);
+    m_FireQuad.InitializeModel(device, "models/plane.obj");
+    m_logModel.InitializeModel(device, "models/logs.obj");
 
-	m_BasicModel2.InitializeModel(device,"drone.obj");
-	m_BasicModel3.InitializeBox(device, 10.0f, 0.1f, 10.0f);	//box includes dimensions
+
+	//m_BasicModel2.InitializeModel(device,"drone.obj");
+	//m_BasicModel3.InitializeBox(device, 10.0f, 0.1f, 10.0f);	//box includes dimensions
 
 	//load and set up our Vertex and Pixel Shaders
-	m_BasicShaderPair.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
+    m_waterShader.InitStandard(device, L"Water_vs.cso", L"Water_ps.cso");
+    m_terrainShader.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
+    m_seafloorShader.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
+    m_logShader.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
+    m_fireShader.InitStandard(device, L"fire_vs.cso", L"fire_ps.cso");
 
 	//load Textures
-	CreateDDSTextureFromFile(device, L"seafloor.dds",		nullptr,	m_texture1.ReleaseAndGetAddressOf());
-	CreateDDSTextureFromFile(device, L"EvilDrone_Diff.dds", nullptr,	m_texture2.ReleaseAndGetAddressOf());
+	CreateDDSTextureFromFile(device, L"textures/waterTile.dds",		nullptr, m_waterTexture.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/TerrainGreen.dds", nullptr, m_terrainTexture.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/noise.dds", nullptr, m_noiseTexture.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/sandTile.dds", nullptr, m_sandTexture.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/SandNormal.dds", nullptr, m_sandNormal.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/rock.dds", nullptr, m_rockTexture.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/rockNormal.dds", nullptr, m_rockNormal.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/fireTexture.dds", nullptr, m_fireTexture.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/fireAlpha.dds", nullptr, m_fireAlpha.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/woodBrown.dds", nullptr, m_logTexture.ReleaseAndGetAddressOf());
 
 	//Initialise Render to texture
 	m_FirstRenderPass = new RenderTexture(device, 800, 600, 1, 2);	//for our rendering, We dont use the last two properties. but.  they cant be zero and they cant be the same. 

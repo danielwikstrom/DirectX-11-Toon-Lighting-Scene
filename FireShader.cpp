@@ -1,17 +1,17 @@
 #include "pch.h"
-#include "Shader.h"
+#include "FireShader.h"
 
 
-Shader::Shader()
+FireShader::FireShader()
 {
 }
 
 
-Shader::~Shader()
+FireShader::~FireShader()
 {
 }
 
-bool Shader::InitStandard(ID3D11Device * device, WCHAR * vsFilename, WCHAR * psFilename)
+bool FireShader::InitStandard(ID3D11Device* device, WCHAR* vsFilename, WCHAR* psFilename)
 {
 	D3D11_BUFFER_DESC	matrixBufferDesc;
 	D3D11_SAMPLER_DESC	samplerDesc;
@@ -42,10 +42,10 @@ bool Shader::InitStandard(ID3D11Device * device, WCHAR * vsFilename, WCHAR * psF
 
 	// Create the vertex input layout.
 	device->CreateInputLayout(polygonLayout, numElements, vertexShaderBuffer.data(), vertexShaderBuffer.size(), &m_layout);
-	
+
 
 	//LOAD SHADER:	PIXEL
-	auto pixelShaderBuffer = DX::ReadData(psFilename);	
+	auto pixelShaderBuffer = DX::ReadData(psFilename);
 	result = device->CreatePixelShader(pixelShaderBuffer.data(), pixelShaderBuffer.size(), NULL, &m_pixelShader);
 	if (result != S_OK)
 	{
@@ -99,7 +99,7 @@ bool Shader::InitStandard(ID3D11Device * device, WCHAR * vsFilename, WCHAR * psF
 	return true;
 }
 
-bool Shader::SetShaderParameters(ID3D11DeviceContext * context, DirectX::SimpleMath::Matrix * world, DirectX::SimpleMath::Matrix * view, DirectX::SimpleMath::Matrix * projection, Light *sceneLight1,float time, DirectX::SimpleMath::Vector2 tile, ID3D11ShaderResourceView* texture1, ID3D11ShaderResourceView* texture2)
+bool FireShader::SetShaderParameters(ID3D11DeviceContext* context, DirectX::SimpleMath::Matrix* world, DirectX::SimpleMath::Matrix* view, DirectX::SimpleMath::Matrix* projection, Light* sceneLight1, float time, DirectX::SimpleMath::Vector2 tile, ID3D11ShaderResourceView* texture1, ID3D11ShaderResourceView* texture2, ID3D11ShaderResourceView* texture3)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	MatrixBufferType* dataPtr;
@@ -123,25 +123,27 @@ bool Shader::SetShaderParameters(ID3D11DeviceContext * context, DirectX::SimpleM
 	context->Map(m_lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	lightPtr = (LightBufferType*)mappedResource.pData;
 	lightPtr->ambient = sceneLight1->getAmbientColour();
-	lightPtr->diffuse = sceneLight1->getDiffuseColour();	
-	lightPtr->position = sceneLight1->getPosition();  
+	lightPtr->diffuse = sceneLight1->getDiffuseColour();
+	lightPtr->position = sceneLight1->getPosition();
 	//lightPtr->time = 0.0f;
 	lightPtr->padding = 0.0f;
 	context->Unmap(m_lightBuffer, 0);
 	context->PSSetConstantBuffers(0, 1, &m_lightBuffer);	//note the first variable is the mapped buffer ID.  Corresponding to what you set in the PS
 
 	//pass the desired texture to the pixel shader.
-	if(texture1 != NULL)
+	if (texture1 != NULL)
 		context->PSSetShaderResources(0, 1, &texture1);
 	if (texture2 != NULL)
 		context->PSSetShaderResources(1, 1, &texture2);
+	if (texture3 != NULL)
+		context->PSSetShaderResources(2, 1, &texture3);
 
 	return false;
 }
 
 
 
-void Shader::EnableShader(ID3D11DeviceContext * context)
+void FireShader::EnableShader(ID3D11DeviceContext* context)
 {
 	context->IASetInputLayout(m_layout);							//set the input layout for the shader to match out geometry
 	context->VSSetShader(m_vertexShader.Get(), 0, 0);				//turn on vertex shader
