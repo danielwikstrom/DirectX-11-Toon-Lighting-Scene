@@ -8,6 +8,12 @@ cbuffer MatrixBuffer : register(b0)
     matrix projectionMatrix;
     float time;
     float2 tile;
+    float3 lightPosition;
+};
+
+cbuffer LightPosBuffer  : register(b1)
+{
+    float3 lightPosition1;
 };
 
 struct InputType
@@ -21,6 +27,7 @@ struct OutputType
 {
     float4 position : SV_POSITION;
     float2 tex : TEXCOORD0;
+    float3 lightPos : TEXCOORD1;
     float3 normal : NORMAL;
     float3 position3D : TEXCOORD2;
     float time : TIME;
@@ -42,8 +49,8 @@ OutputType main(InputType input)
     // Calculate the normal vector against the world matrix only.
     output.normal = mul(input.normal, (float3x3)worldMatrix);
 
-    float speed = 1.0f;
-    float freq = 3;
+    float speed = 0.4f;
+    float freq = 1;
     float amp = 0.3f;
     float t = time * speed;
     float waveLength = sin(t + output.position.x * freq) * amp + cos(t * 2 + output.position.z * freq * 2) * amp;
@@ -57,6 +64,11 @@ OutputType main(InputType input)
 
     // Normalize the normal vector.
     output.normal = normalize(output.normal);
+
+    //Calculalte light position 
+    float4 worldPos = mul(input.position, worldMatrix);
+    output.lightPos.xyz = lightPosition.xyz - worldPos.xyz;
+    output.lightPos = normalize(output.lightPos);
 
     //output.color = input.color;
     output.time = time;

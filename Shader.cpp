@@ -4,6 +4,8 @@
 
 Shader::Shader()
 {
+	m_pointlightColorBuffer = 0;
+	m_pointlightPosBuffer = 0;
 }
 
 
@@ -16,6 +18,8 @@ bool Shader::InitStandard(ID3D11Device * device, WCHAR * vsFilename, WCHAR * psF
 	D3D11_BUFFER_DESC	matrixBufferDesc;
 	D3D11_SAMPLER_DESC	samplerDesc;
 	D3D11_BUFFER_DESC	lightBufferDesc;
+	D3D11_BUFFER_DESC	pointLightPosBufferDesc;
+	D3D11_BUFFER_DESC	pointLightColorBufferDesc;
 
 	//LOAD SHADER:	VERTEX
 	auto vertexShaderBuffer = DX::ReadData(vsFilename);
@@ -32,8 +36,7 @@ bool Shader::InitStandard(ID3D11Device * device, WCHAR * vsFilename, WCHAR * psF
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "BINORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
 	};
 
 	// Get a count of the elements in the layout.
@@ -78,6 +81,34 @@ bool Shader::InitStandard(ID3D11Device * device, WCHAR * vsFilename, WCHAR * psF
 	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
 	device->CreateBuffer(&lightBufferDesc, NULL, &m_lightBuffer);
 
+
+	// Setup point light color buffer
+	// Setup the description of the light dynamic constant buffer that is in the pixel shader.
+	// Note that ByteWidth always needs to be a multiple of 16 if using D3D11_BIND_CONSTANT_BUFFER or CreateBuffer will fail.
+	pointLightColorBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	pointLightColorBufferDesc.ByteWidth = sizeof(PointLightColorBufferType);
+	pointLightColorBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	pointLightColorBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	pointLightColorBufferDesc.MiscFlags = 0;
+	pointLightColorBufferDesc.StructureByteStride = 0;
+
+	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
+	device->CreateBuffer(&pointLightColorBufferDesc, NULL, &m_pointlightColorBuffer);
+
+
+	// Setup point light pos buffer
+	// Setup the description of the light dynamic constant buffer that is in the pixel shader.
+	// Note that ByteWidth always needs to be a multiple of 16 if using D3D11_BIND_CONSTANT_BUFFER or CreateBuffer will fail.
+	pointLightPosBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	pointLightPosBufferDesc.ByteWidth = sizeof(PointLightPosBufferType);
+	pointLightPosBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	pointLightPosBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	pointLightPosBufferDesc.MiscFlags = 0;
+	pointLightPosBufferDesc.StructureByteStride = 0;
+
+	// Create the constant buffer pointer so we can access the vertex shader constant buffer from within this class.
+	device->CreateBuffer(&pointLightPosBufferDesc, NULL, &m_pointlightPosBuffer);
+
 	// Create a texture sampler state description.
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -96,14 +127,20 @@ bool Shader::InitStandard(ID3D11Device * device, WCHAR * vsFilename, WCHAR * psF
 	// Create the texture sampler state.
 	device->CreateSamplerState(&samplerDesc, &m_sampleState);
 
+
+
+
+
 	return true;
 }
 
-bool Shader::SetShaderParameters(ID3D11DeviceContext * context, DirectX::SimpleMath::Matrix * world, DirectX::SimpleMath::Matrix * view, DirectX::SimpleMath::Matrix * projection, Light *sceneLight1,float time, DirectX::SimpleMath::Vector2 tile, ID3D11ShaderResourceView* texture1, ID3D11ShaderResourceView* texture2)
+bool Shader::SetShaderParameters(ID3D11DeviceContext * context, DirectX::SimpleMath::Matrix * world, DirectX::SimpleMath::Matrix * view, DirectX::SimpleMath::Matrix * projection, Light *sceneLight1, Light* sceneLight2,float time, DirectX::SimpleMath::Vector2 tile, ID3D11ShaderResourceView* texture1, ID3D11ShaderResourceView* texture2)
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	MatrixBufferType* dataPtr;
 	LightBufferType* lightPtr;
+	PointLightColorBufferType* pointLightColorPtr;
+	PointLightPosBufferType* pointLightPosPtr;
 	DirectX::SimpleMath::Matrix  tworld, tview, tproj;
 
 	// Transpose the matrices to prepare them for the shader.
@@ -117,18 +154,33 @@ bool Shader::SetShaderParameters(ID3D11DeviceContext * context, DirectX::SimpleM
 	dataPtr->projection = tproj;
 	dataPtr->time = time;
 	dataPtr->tile = tile;
+	dataPtr->lightPosition = sceneLight2->getPosition();
 	context->Unmap(m_matrixBuffer, 0);
 	context->VSSetConstantBuffers(0, 1, &m_matrixBuffer);	//note the first variable is the mapped buffer ID.  Corresponding to what you set in the VS
+
+	//context->Map(m_pointlightPosBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	//pointLightPosPtr = (PointLightPosBufferType*)mappedResource.pData;
+	//pointLightPosPtr->lightPosition = sceneLight2->getPosition();
+	//context->Unmap(m_pointlightPosBuffer, 0);
+	//context->PSSetConstantBuffers(1, 1, &m_pointlightPosBuffer);	//note the first variable is the mapped buffer ID.  Corresponding to what you set in the VS
+
 
 	context->Map(m_lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	lightPtr = (LightBufferType*)mappedResource.pData;
 	lightPtr->ambient = sceneLight1->getAmbientColour();
 	lightPtr->diffuse = sceneLight1->getDiffuseColour();	
 	lightPtr->position = sceneLight1->getPosition();  
-	//lightPtr->time = 0.0f;
 	lightPtr->padding = 0.0f;
 	context->Unmap(m_lightBuffer, 0);
 	context->PSSetConstantBuffers(0, 1, &m_lightBuffer);	//note the first variable is the mapped buffer ID.  Corresponding to what you set in the PS
+
+
+	context->Map(m_pointlightColorBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	pointLightColorPtr = (PointLightColorBufferType*)mappedResource.pData;
+	pointLightColorPtr->diffuse = sceneLight2->getDiffuseColour();
+	context->Unmap(m_pointlightColorBuffer, 0);
+	context->PSSetConstantBuffers(1, 1, &m_pointlightColorBuffer);	//note the first variable is the mapped buffer ID.  Corresponding to what you set in the PS
+
 
 	//pass the desired texture to the pixel shader.
 	if(texture1 != NULL)

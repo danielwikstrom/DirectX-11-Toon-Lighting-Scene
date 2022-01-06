@@ -59,6 +59,7 @@ private:
     void Update(DX::StepTimer const& timer);
     void Render();
 	void RenderTexturePass1();
+    SimpleMath::Quaternion QuaternionRotation(SimpleMath::Vector3 point, SimpleMath::Vector3 axis, float angle);
     void Clear();
     void CreateDeviceDependentResources();
     void CreateWindowSizeDependentResources();
@@ -87,6 +88,7 @@ private:
 
 	//lights
 	Light																	m_Light;
+    Light																	m_PointLight;
 
 	//Cameras
 	Camera																	m_Camera01;
@@ -103,13 +105,17 @@ private:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_fireTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_fireAlpha;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_logTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_dolphinTex;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_skyboxTex;
 
 	//Shaders
 	Shader																	m_waterShader;
     Shader																	m_terrainShader;
     Shader																	m_seafloorShader;
     Shader																	m_logShader;
+    Shader																	m_dolphinShader;
     FireShader															    m_fireShader;
+    Shader															        m_skyboxShader;
 
     // 3D Models
     ModelClass                                                              m_WaterModel;
@@ -118,6 +124,8 @@ private:
     ModelClass                                                              m_floor;
     ModelClass                                                              m_FireQuad;
     ModelClass                                                              m_logModel;
+    ModelClass                                                              m_dolphinModel;
+    ModelClass                                                              m_skyBoxModel;
 
 	//RenderTextures
 	RenderTexture*															m_FirstRenderPass;
