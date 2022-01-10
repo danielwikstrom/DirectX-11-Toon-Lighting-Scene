@@ -35,13 +35,13 @@ float4 main(InputType input) : SV_TARGET
 	float2	movingTexcoord3;
 	float2	noiseUV;
 
-	movingTexcoord1 = input.tex * 3;
-	movingTexcoord1.y += (input.time * 1);
+	movingTexcoord1 = input.tex * 2;
+	movingTexcoord1.y += (input.time * 0.1f);
 
-	movingTexcoord2 = input.tex * 2;
+	movingTexcoord2 = input.tex * 4;
 	movingTexcoord2.y += (input.time * 0.5f);
 
-	movingTexcoord3 = input.tex * 5;
+	movingTexcoord3 = input.tex * 6;
 	movingTexcoord3.y += (input.time * 0.7f);
 
 	float4 noise1 = noiseTexture.Sample(SampleType, movingTexcoord1);
@@ -49,12 +49,17 @@ float4 main(InputType input) : SV_TARGET
 	float4 noise3 = noiseTexture.Sample(SampleType, movingTexcoord3);
 
 
-	noise1.x *= 0.1f;
-	noise1.y *= 0.1f;
-	noise2.x *= 0.1f;
-	noise2.y *= 0.1f;
-	noise3.x *= 0.1f;
-	noise3.y *= 0.1f;
+	float xDistortion = 0.15f;
+	float yDistiortion = 0.05f;
+
+	noise1.x *= xDistortion;
+	noise1.y *= yDistiortion;
+
+	noise2.x *= xDistortion;
+	noise2.y *= yDistiortion;
+
+	noise3.x *= xDistortion;
+	noise3.y *= yDistiortion;
 
 	noiseTex = noise1 + noise2 + noise3;
 

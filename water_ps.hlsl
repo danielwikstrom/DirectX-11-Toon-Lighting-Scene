@@ -57,7 +57,7 @@ float4 main(InputType input) : SV_TARGET
 	lightIntensityDir = saturate(dot(input.normal, -lightDir));
 
 	//Make light intensity have 5 possible values to get a cartoon effect
-	lightIntensityDir = floor(lightIntensityDir * 5) / 5;
+	lightIntensityDir = ceil(lightIntensityDir * 5) / 5;
 
 	dirColor = diffuseColor * lightIntensityDir;
 
@@ -66,7 +66,7 @@ float4 main(InputType input) : SV_TARGET
 	lightIntensityPoint = saturate(dot(input.normal, input.lightPos));
 
 	//Make light intensity have 5 possible values to get a cartoon effect
-	lightIntensityPoint = floor(lightIntensityPoint * 5) / 5;
+	lightIntensityPoint = ceil(lightIntensityPoint * 5) / 5;
 	pointColor = pointLightColor * lightIntensityPoint;
 
 

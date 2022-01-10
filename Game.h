@@ -13,7 +13,7 @@
 #include "RenderTexture.h"
 #include "FireShader.h"
 
-
+#define PI 3.141592
 // A basic game implementation that creates a D3D11 device and
 // provides a game loop.
 class Game final : public DX::IDeviceNotify
@@ -22,6 +22,8 @@ public:
 
     Game() noexcept(false);
     ~Game();
+
+    
 
     // Initialization and management
     void Initialize(HWND window, int width, int height);
@@ -63,6 +65,7 @@ private:
     void Clear();
     void CreateDeviceDependentResources();
     void CreateWindowSizeDependentResources();
+    void DrawSimpleBox(Shader shader, SimpleMath::Vector3 position, float scaleX, float scaleY, float scaleZ);
 
     // Device resources.
     std::unique_ptr<DX::DeviceResources>    m_deviceResources;
@@ -96,12 +99,8 @@ private:
 
 	//textures 
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_waterTexture;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_terrainTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_noiseTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_sandTexture;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_sandNormal;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_rockTexture;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_rockNormal;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_fireTexture;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_fireAlpha;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>                        m_logTexture;
@@ -110,8 +109,7 @@ private:
 
 	//Shaders
 	Shader																	m_waterShader;
-    Shader																	m_terrainShader;
-    Shader																	m_seafloorShader;
+    Shader																	m_sandShader;
     Shader																	m_logShader;
     Shader																	m_dolphinShader;
     FireShader															    m_fireShader;
@@ -120,19 +118,18 @@ private:
     // 3D Models
     ModelClass                                                              m_WaterModel;
     ModelClass                                                              m_TerrainModel;
-    ModelClass                                                              m_CharacterModel;
     ModelClass                                                              m_floor;
     ModelClass                                                              m_FireQuad;
     ModelClass                                                              m_logModel;
     ModelClass                                                              m_dolphinModel;
-    ModelClass                                                              m_skyBoxModel;
+    ModelClass                                                              m_treeModel;
 
 	//RenderTextures
 	RenderTexture*															m_FirstRenderPass;
 	RECT																	m_fullscreenRect;
 	RECT																	m_CameraViewRect;
 
-
+    bool                                                                    TorchIsOn = false;
 	
 
 

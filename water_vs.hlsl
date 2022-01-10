@@ -53,7 +53,8 @@ OutputType main(InputType input)
     float freq = 1;
     float amp = 0.3f;
     float t = time * speed;
-    float waveLength = sin(t + output.position.x * freq) * amp + cos(t * 2 + output.position.z * freq * 2) * amp;
+
+    float waveLength = sin(t + output.position.x * freq) * amp + sin(t * 2 + output.position.z * freq * 2) * amp;
     output.position.y += waveLength;
     output.normal = normalize(float3(output.normal.x + waveLength, output.normal.y, output.normal.z + waveLength));
     output.waveCol = waveLength;

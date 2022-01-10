@@ -63,14 +63,12 @@ void Game::Initialize(HWND window, int width, int height)
 	m_Light.setDirection(0.0f, -1.0f, 0.0f);
 
     //setup point light
-    m_PointLight.setDiffuseColour(1.0f, 0.5f, 0.25f, 1.0f);
+    m_PointLight.setDiffuseColour(1.0f, 0.2f, 0.1f, 1.0f);
     m_PointLight.setPosition(0.0f, 0.0f, 4.0f);
 
 	//setup camera
-	m_Camera01.setPosition(Vector3(00.0f, 4.0f, 10.0f));
-	m_Camera01.setRotation(Vector3(0.0f, -180.0f, 90.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
-	m_Camera02.setPosition(Vector3(0.0f, 7.0f, 0.0f));
-	m_Camera02.setRotation(Vector3(0.0f, -180.0f, 180.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
+	m_Camera01.setPosition(Vector3(00.0f, 4.0f, -10.0f));
+	m_Camera01.setRotation(Vector3(0.0f, 0.0f, 90.0f));	//orientation is -90 becuase zero will be looking up at the sky straight up. 
 
 
 
@@ -190,6 +188,11 @@ void Game::Update(DX::StepTimer const& timer)
         position -= (m_Camera01.getRight() * movementSpeed); //add the forward vector
         m_Camera01.setPosition(position);
     }
+    if (m_gameInputCommands.toggleLights)
+    {
+        TorchIsOn = !TorchIsOn;
+    }
+
 
 	m_Camera01.Update();	//camera update.
 
@@ -264,16 +267,18 @@ void Game::Render()
     //Render inner faces of skybox
 	context->RSSetState(m_states->CullNone());
     //RenderSkybox
-    m_world = SimpleMath::Matrix::Identity;
-    SimpleMath::Matrix skyboxScale = SimpleMath::Matrix::CreateScale(40.0f, 40.0f, 40.0f);
-    m_world = m_world * skyboxScale;
-
-    m_skyboxShader.EnableShader(context);
-    m_skyboxShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, &m_PointLight, 0.0f, Vector2(0.05f, 0.05f), m_skyboxTex.Get());
-    m_skyBoxModel.Render(context);
-
+    DrawSimpleBox(m_skyboxShader, Vector3(0, 0, 0), 80, 80, 80);
 
     context->RSSetState(m_states->CullClockwise());
+
+    if (TorchIsOn)
+    {
+        m_PointLight.setDiffuseColour(1.0f, 0.2f, 0.1f, 1.0f);
+    }
+    else
+    {
+        m_PointLight.setDiffuseColour(0.0f, 0.0f, 0.0f, 1.0f);
+    }
 
     // Prepare transforms for island model
     m_world = SimpleMath::Matrix::Identity;
@@ -283,8 +288,8 @@ void Game::Render()
     m_world = m_world * islandPosition;
 
     //render the island model
-    m_terrainShader.EnableShader(context);
-    m_terrainShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, &m_PointLight, 0.0f, Vector2(0.05f, 0.05f), m_rockTexture.Get());
+    m_sandShader.EnableShader(context);
+    m_sandShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, &m_PointLight, 0.0f, Vector2(10.0f, 10.0f), m_sandTexture.Get());
     m_TerrainModel.Render(context);
 
     // Prepare transforms for logs model
@@ -296,8 +301,22 @@ void Game::Render()
 
     //render the logs model
     m_logShader.EnableShader(context);
-    m_logShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, &m_PointLight, 0.0f, Vector2(0.05f, 0.05f), m_logTexture.Get());
+    m_logShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, &m_PointLight, 0.0f, Vector2(1, 1), m_logTexture.Get());
     m_logModel.Render(context);
+
+
+
+    // Prepare transforms for tree model
+    m_world = SimpleMath::Matrix::Identity;
+    SimpleMath::Matrix treeOffset = SimpleMath::Matrix::CreateTranslation(-3.0f, 1.1f, 4.0f);
+    SimpleMath::Matrix treeScale = SimpleMath::Matrix::CreateScale(0.3f, 0.3f, 0.3f);
+    SimpleMath::Matrix treeRotationX = SimpleMath::Matrix::CreateRotationX(30 * (PI/180.0f));
+    SimpleMath::Matrix treePosition = treeRotationX * logScale * treeOffset;
+    m_world = m_world * treePosition;
+
+    //render the tree model
+    m_logShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, &m_PointLight, 0.0f, Vector2(1, 1), m_logTexture.Get());
+    m_treeModel.Render(context);
 
 
     float radiansPerSec = 3.1415f * 0.25f;
@@ -307,7 +326,7 @@ void Game::Render()
     // Prepare transforms for dolphins model
     m_world = SimpleMath::Matrix::Identity;
     SimpleMath::Vector3 dolphinPos = Vector3(0.0f, -2.0f, 12.0f);
-    SimpleMath::Matrix dolphinRotZ = SimpleMath::Matrix::CreateRotationZ(-15 * (3.1415f/180.0f));
+    SimpleMath::Matrix dolphinRotZ = SimpleMath::Matrix::CreateRotationZ(-15 * (PI/180.0f));
     SimpleMath::Matrix dolphinRotY = SimpleMath::Matrix::CreateRotationY(currentRotation);
     SimpleMath::Matrix dolphinScale = SimpleMath::Matrix::CreateScale(1.0f, 1.0f, 1.0f);
 
@@ -327,14 +346,14 @@ void Game::Render()
 
     // Prepare transforms for sea floor
     m_world = SimpleMath::Matrix::Identity;
-    SimpleMath::Matrix seafloorOffset = SimpleMath::Matrix::CreateTranslation(0.0f, -30.0f, 0.0f);
+    SimpleMath::Matrix seafloorOffset = SimpleMath::Matrix::CreateTranslation(0.0f, -10.0f, 0.0f);
     SimpleMath::Matrix seaFloorScale = SimpleMath::Matrix::CreateScale(1000.0f, 1.0f, 1000.0f);
     SimpleMath::Matrix seaFloorPos =seaFloorScale * seafloorOffset;
     m_world = m_world * seaFloorPos;
 
     //render the sea floor
-    m_seafloorShader.EnableShader(context);
-    m_seafloorShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, &m_PointLight, 10.0f, Vector2(100, 100), m_sandTexture.Get());
+    m_sandShader.EnableShader(context);
+    m_sandShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, &m_PointLight, 0.0f, Vector2(100, 100), m_sandTexture.Get());
     m_floor.Render(context);
 
     //Prepare transforms for water
@@ -351,36 +370,39 @@ void Game::Render()
 	m_waterShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, &m_PointLight, m_timer.GetTotalSeconds(), Vector2(30,30), m_waterTexture.Get());
 	m_WaterModel.Render(context);
 
+    if (TorchIsOn)
+    {
+        //Transform matrix for fire
+        m_world = SimpleMath::Matrix::Identity;
+        SimpleMath::Vector3 firePos = Vector3(0.1f, 4.0f, 0.0f);
+        SimpleMath::Matrix fireOffset = SimpleMath::Matrix::CreateTranslation(firePos);
+        SimpleMath::Matrix fireRotationX = SimpleMath::Matrix::CreateRotationX(-3.1415f / 2);
+        //SimpleMath::Matrix fireRotationY = SimpleMath::Matrix::CreateRotationY(3.1415f);
+        SimpleMath::Matrix fireScale = SimpleMath::Matrix::CreateScale(0.01f, 0.0075f, 0.01f);
 
-    //Transform matrix for fire
-    m_world = SimpleMath::Matrix::Identity;
-    SimpleMath::Vector3 firePos = Vector3(00.0f, 4.2f, 0.0f);
-    SimpleMath::Matrix fireOffset = SimpleMath::Matrix::CreateTranslation(firePos);
-    SimpleMath::Matrix fireRotationX = SimpleMath::Matrix::CreateRotationX(-3.1415f/2);
-    //SimpleMath::Matrix fireRotationY = SimpleMath::Matrix::CreateRotationY(3.1415f);
-    SimpleMath::Matrix fireScale = SimpleMath::Matrix::CreateScale(0.01f, 0.0075f, 0.01f);
+        //Look at camera behaviour
+        SimpleMath::Vector3 fireForward = SimpleMath::Vector3(0, 0, 1);
+        SimpleMath::Vector3 fireToCamVector = firePos - m_Camera01.getPosition();
+        fireToCamVector = SimpleMath::Vector3(fireToCamVector.x, 0, fireToCamVector.z);
+        float camMod = fireToCamVector.Length();
+        float fireMod = fireForward.Length();
+        float dotProd = fireToCamVector.Dot(fireForward);
+        float cosA = dotProd / (camMod * fireMod);
+        float angle = acos(cosA);
 
-    //Look at camera behaviour
-    SimpleMath::Vector3 fireForward = SimpleMath::Vector3(0, 0, 1);
-    SimpleMath::Vector3 fireToCamVector = firePos - m_Camera01.getPosition();
-    fireToCamVector = SimpleMath::Vector3(fireToCamVector.x, 0, fireToCamVector.z);
-    float camMod = fireToCamVector.Length();
-    float fireMod = fireForward.Length();
-    float dotProd = fireToCamVector.Dot(fireForward);
-    float cosA = dotProd / (camMod * fireMod);
-    float angle = acos(cosA);
-
-    //When the x part of the vector is positive, the rotation angle is negative and viceversa
-    angle *= (abs(fireToCamVector.x) / fireToCamVector.x);
-    SimpleMath::Matrix fireRotationY = SimpleMath::Matrix::CreateRotationY(angle);
-    m_world = m_world * fireRotationX * fireRotationY * fireScale * fireOffset;
+        //When the x part of the vector is positive, the rotation angle is negative and viceversa
+        angle *= (abs(fireToCamVector.x) / fireToCamVector.x);
+        SimpleMath::Matrix fireRotationY = SimpleMath::Matrix::CreateRotationY(angle);
+        m_world = m_world * fireRotationX * fireRotationY * fireScale * fireOffset;
 
 
 
-    //Render fire
-    m_fireShader.EnableShader(context);
-    m_fireShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_timer.GetTotalSeconds(), Vector2(1, 1), m_fireTexture.Get(), m_noiseTexture.Get(), m_fireAlpha.Get());
-    m_FireQuad.Render(context);
+        //Render fire
+        m_fireShader.EnableShader(context);
+        m_fireShader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, m_timer.GetTotalSeconds(), Vector2(1, 1), m_fireTexture.Get(), m_noiseTexture.Get(), m_fireAlpha.Get());
+        m_FireQuad.Render(context);
+    }
+
 
 	//std::wstring rotation = std::to_wstring();
 	//const wchar_t* rochar = s.c_str();
@@ -415,38 +437,70 @@ Quaternion Game::QuaternionRotation(Vector3 point, Vector3 axis, float angle)
     return rotationQ;
 }
 
-//void Game::RenderTexturePass1()
-//{
-//	auto context = m_deviceResources->GetD3DDeviceContext();
-//	auto renderTargetView = m_deviceResources->GetRenderTargetView();
-//	auto depthTargetView = m_deviceResources->GetDepthStencilView();
-//	// Set the render target to be the render to texture.
-//	m_FirstRenderPass->setRenderTarget(context);
-//	// Clear the render to texture.
-//	m_FirstRenderPass->clearRenderTarget(context, 0.0f, 0.0f, 1.0f, 1.0f);
-//
-//	// Turn our shaders on,  set parameters
-//    m_waterShader.EnableShader(context);
-//	//m_BasicShaderPair.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light, m_texture1.Get());
-//    //m_waterShader.SetShaderParameters(context, &m_world, &m_view2, &m_projection, &m_Light);
-//
-//	//render our model
-//    m_WaterModel.Render(context);
-//
-//	//prepare transform for second object. 
-//	SimpleMath::Matrix newPosition = SimpleMath::Matrix::CreateTranslation(2.0f, 0.0f, 0.0f);
-//	m_world = m_world * newPosition;
-//
-//
-//	//prepare transform for floor object. 
-//	//m_world = SimpleMath::Matrix::Identity; //set world back to identity
-//	//SimpleMath::Matrix newPosition2 = SimpleMath::Matrix::CreateTranslation(0.0f, -0.6f, 0.0f);
-//	//m_world = m_world * newPosition2;
-//
-//
-//	// Reset the render target back to the original back buffer and not the render to texture anymore.	
-//	context->OMSetRenderTargets(1, &renderTargetView, depthTargetView);
-//}
+void Game::DrawSimpleBox(Shader shader, SimpleMath::Vector3 position, float scaleX, float scaleY, float scaleZ)
+{
+    auto context = m_deviceResources->GetD3DDeviceContext();
+    const int vCount = 8;
+    const int iCount = 36;
+    uint16_t iArray[iCount];
+    VertexPositionColor vArray[vCount];
+    iArray[0] = 0;
+    iArray[1] = 1;
+    iArray[2] = 2;
+    iArray[3] = 1;
+    iArray[4] = 3;
+    iArray[5] = 2;
+    iArray[6] = 4;
+    iArray[7] = 5;
+    iArray[8] = 6;
+    iArray[9] = 5;
+    iArray[10] = 7;
+    iArray[11] = 6;
+    iArray[12] = 0;
+    iArray[13] = 1;
+    iArray[14] = 4;
+    iArray[15] = 1;
+    iArray[16] = 5;
+    iArray[17] = 4;
+    iArray[18] = 2;
+    iArray[19] = 3;
+    iArray[20] = 6;
+    iArray[21] = 6;
+    iArray[22] = 3;
+    iArray[23] = 7;
+    iArray[24] = 0;
+    iArray[25] = 2;
+    iArray[26] = 4;
+    iArray[27] = 2;
+    iArray[28] = 6;
+    iArray[29] = 4;
+    iArray[30] = 1;
+    iArray[31] = 3;
+    iArray[32] = 5;
+    iArray[33] = 3;
+    iArray[34] = 5;
+    iArray[35] = 7;
+    vArray[0] = VertexPositionColor(Vector3(-0.5f, 0.5f, 0.5f), Colors::Black);
+    vArray[1] = VertexPositionColor(Vector3(-0.5f, 0.5f, -0.5f), Colors::Black);
+    vArray[2] = VertexPositionColor(Vector3(0.5f, 0.5f, 0.5f), Colors::Black);
+    vArray[3] = VertexPositionColor(Vector3(0.5f, 0.5f, -0.5f), Colors::Black);
+    vArray[4] = VertexPositionColor(Vector3(-0.5f, -0.5f, 0.5f), Colors::Black);
+    vArray[5] = VertexPositionColor(Vector3(-0.5f, -0.5f, -0.5f), Colors::Black);
+    vArray[6] = VertexPositionColor(Vector3(0.5f, -0.5f, 0.5f), Colors::Black);
+    vArray[7] = VertexPositionColor(Vector3(0.5f, -0.5f, -0.5f), Colors::Black);
+
+    m_batch->Begin();
+        m_world = SimpleMath::Matrix::Identity;
+        SimpleMath::Matrix cubePos = SimpleMath::Matrix::CreateTranslation(position);
+        SimpleMath::Matrix cubeScale = SimpleMath::Matrix::CreateScale(scaleX, scaleY, scaleZ);
+        m_world = m_world * cubeScale * cubePos;
+        shader.EnableShader(context);
+        shader.SetShaderParameters(context, &m_world, &m_view, &m_projection, &m_Light, &m_PointLight, 0.0f, Vector2(1,1), m_skyboxTex.Get());				//turn on pixel shader
+    m_batch->DrawIndexed(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, iArray, iCount, vArray, vCount);
+    m_batch->End();
+
+}
+
 
 // Helper method to clear the back buffers.
 void Game::Clear()
@@ -551,7 +605,7 @@ void Game::CreateDeviceDependentResources()
     m_FireQuad.InitializeModel(device, "models/plane.obj");
     m_logModel.InitializeModel(device, "models/logs.obj");
     m_dolphinModel.InitializeModel(device, "models/dolphins.obj");
-    m_skyBoxModel.InitializeModel(device, "models/skybox.obj");
+    m_treeModel.InitializeModel(device, "models/tree1.obj");
 
 
 	//m_BasicModel2.InitializeModel(device,"drone.obj");
@@ -559,8 +613,7 @@ void Game::CreateDeviceDependentResources()
 
 	//load and set up our Vertex and Pixel Shaders
     m_waterShader.InitStandard(device, L"Water_vs.cso", L"Water_ps.cso");
-    m_terrainShader.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
-    m_seafloorShader.InitStandard(device, L"Water_vs.cso", L"Water_ps.cso");
+    m_sandShader.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
     m_logShader.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
     m_dolphinShader.InitStandard(device, L"light_vs.cso", L"light_ps.cso");
     m_fireShader.InitStandard(device, L"fire_vs.cso", L"fire_ps.cso");
@@ -568,17 +621,13 @@ void Game::CreateDeviceDependentResources()
 
 	//load Textures
 	CreateDDSTextureFromFile(device, L"textures/waterTile.dds",		nullptr, m_waterTexture.ReleaseAndGetAddressOf());
-    CreateDDSTextureFromFile(device, L"textures/TerrainGreen.dds", nullptr, m_terrainTexture.ReleaseAndGetAddressOf());
     CreateDDSTextureFromFile(device, L"textures/noise.dds", nullptr, m_noiseTexture.ReleaseAndGetAddressOf());
     CreateDDSTextureFromFile(device, L"textures/sandTile.dds", nullptr, m_sandTexture.ReleaseAndGetAddressOf());
-    CreateDDSTextureFromFile(device, L"textures/SandNormal.dds", nullptr, m_sandNormal.ReleaseAndGetAddressOf());
-    CreateDDSTextureFromFile(device, L"textures/rock.dds", nullptr, m_rockTexture.ReleaseAndGetAddressOf());
-    CreateDDSTextureFromFile(device, L"textures/rockNormal.dds", nullptr, m_rockNormal.ReleaseAndGetAddressOf());
     CreateDDSTextureFromFile(device, L"textures/fireTexture.dds", nullptr, m_fireTexture.ReleaseAndGetAddressOf());
     CreateDDSTextureFromFile(device, L"textures/fireAlpha.dds", nullptr, m_fireAlpha.ReleaseAndGetAddressOf());
     CreateDDSTextureFromFile(device, L"textures/woodBrown.dds", nullptr, m_logTexture.ReleaseAndGetAddressOf());
     CreateDDSTextureFromFile(device, L"textures/dolphinsTexture.dds", nullptr, m_dolphinTex.ReleaseAndGetAddressOf());
-    CreateDDSTextureFromFile(device, L"textures/OutputCube.dds", nullptr, m_skyboxTex.ReleaseAndGetAddressOf());
+    CreateDDSTextureFromFile(device, L"textures/black.dds", nullptr, m_skyboxTex.ReleaseAndGetAddressOf());
 
 	//Initialise Render to texture
 	m_FirstRenderPass = new RenderTexture(device, 800, 600, 1, 2);	//for our rendering, We dont use the last two properties. but.  they cant be zero and they cant be the same. 

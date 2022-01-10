@@ -71,6 +71,15 @@ void Input::Update()
 	if (kb.Right)	m_GameInput.rotRight = true;
 	else		m_GameInput.rotRight = false;
 
+	//F key
+	if (kb.F && pF == false)
+	{
+		m_GameInput.toggleLights = true;
+	}
+	else
+		m_GameInput.toggleLights = false;
+	pF = kb.F;
+
 
 }
 

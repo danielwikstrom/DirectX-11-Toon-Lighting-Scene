@@ -14,6 +14,7 @@ struct InputCommands
 	bool rotLeft;
 	bool rotUp;
 	bool rotDown;
+	bool toggleLights;
 };
 
 
@@ -26,6 +27,8 @@ public:
 	void Update();
 	bool Quit();
 	InputCommands getGameInput();
+
+	bool pF = false;
 
 
 private:
